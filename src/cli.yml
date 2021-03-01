@@ -1,0 +1,26 @@
+name: cider
+version: "0.0.0"
+author: Eric Claude Jones <ecjones@protonmail.com>
+about: The Cider CI/CD Management System 
+subcommands:
+    - provider:
+        about: commands to manage CI/CD providers
+        version: "0.0"
+        subcommands:
+            - enable:
+                about: enable a CI/CD provider
+                args:
+                - provider:
+                    value_name: PROVIDER
+                    required: true
+                    help: CI/CD provider to enable
+            - list:
+                about: List enabled providers
+                help: List enabled providers
+    - pipeline:
+        about: commands to manage CI/CD pipelines
+        version: "0.0"
+        subcommands:
+            - list:
+                about: list available pipelines for providers
+                help: list available pipelines for providers
