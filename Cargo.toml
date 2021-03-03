@@ -8,9 +8,11 @@ edition = "2018"
 openapi = { path = "teamcity_apis" }
 clap = {version = "2.33", features = ["yaml"]}
 toml = "0.5"
+serde_yaml = "0.8"
 strum = "0.20.0"
 strum_macros = "0.20.1"
 serde = { version = "1.0", features = ["derive"] }
 serde_derive = "1.0"
 futures = { version = "0.3.*" }
 tokio = {version = "1.2.*", features = ["full"] }
+gitlab = "0.1309.*"

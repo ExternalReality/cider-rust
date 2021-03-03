@@ -2,21 +2,24 @@
 extern crate clap;
 
 use clap::App;
-use serde_derive::{Serialize, Deserialize};
-use strum_macros::EnumString;
+use serde_derive::{Deserialize, Serialize};
+use std::collections::BTreeSet;
 use std::fs::File;
-use std::io::{Read, Write};
+use std::io::Read;
+use strum_macros::EnumString;
 use tokio;
+use toml;
 
 #[derive(Serialize, Deserialize, EnumString, Debug)]
 enum Provider {
     TeamCity,
+    GitLab,
 }
 
 #[derive(Deserialize, Debug)]
 struct ProviderConfig {
     name: Provider,
-    url: String
+    url: String,
 }
 
 fn main() {
@@ -40,18 +43,26 @@ fn handle_provider(sc: &clap::ArgMatches<'_>) {
 
 fn handle_enable(sc: &clap::ArgMatches<'_>) {
     let input = sc.value_of("provider").unwrap();
-    let provider: Provider = input.parse().unwrap();
-    let enabled_providers = vec![provider];
-    let toml = toml::to_string(&enabled_providers).unwrap();
-    let mut file = File::create("cider.dat").expect("create failed");
-    let _ = file.write_all(toml.as_bytes());
+    let _: Provider = input.parse().unwrap();
+    let file = File::open("cider.yaml").unwrap();
+    let len = file.metadata().unwrap().len();
+    let mut providers: BTreeSet<String> = BTreeSet::new();
+
+    if len > 0 {
+        providers = serde_yaml::from_reader(file).unwrap();
+    }
+
+    providers.insert(input.to_string());
+    let file = File::create("cider.yaml").unwrap();
+    serde_yaml::to_writer(file, &providers).unwrap();
+
+    println!("{:?}", providers)
 }
 
 fn handle_list(_: &clap::ArgMatches<'_>) {
-   let mut file = File::open("cider.dat").expect("failed opening file");
-   let mut contents = String::new();
-   file.read_to_string(&mut contents).unwrap();
-   println!("{}", contents);
+    let file = File::open("cider.yaml").expect("failed opening file");
+    let providers: Vec<Provider> = serde_yaml::from_reader(file).unwrap();
+    println!("{:?}", providers);
 }
 
 fn handle_pipeline(sc: &clap::ArgMatches<'_>) {
@@ -66,8 +77,9 @@ async fn handle_pipeline_list(_: &clap::ArgMatches<'_>) {
     let mut file = File::open("provider_config.toml").expect("failed opening file");
     let mut contents = String::new();
     file.read_to_string(&mut contents).unwrap();
-    let _ : ProviderConfig = toml::from_str(&contents).unwrap();
-    let c : openapi::apis::configuration::Configuration = openapi::apis::configuration::Configuration::new();
+    let _: ProviderConfig = toml::from_str(&contents).unwrap();
+    let c: openapi::apis::configuration::Configuration =
+        openapi::apis::configuration::Configuration::new();
     let j = openapi::apis::configuration::Configuration{
         bearer_access_token: Some(String::from("eyJ0eXAiOiAiVENWMiJ9.a21UTG9uRUE1NEZmdlJZNlFraFhMWHRvZXdV.NWViOGU2ZGUtODQ5NS00ZTc0LWJmNjktMmZhNDU3MDE1N2Iy")),
         ..c
