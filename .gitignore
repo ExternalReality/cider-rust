@@ -3,3 +3,7 @@ debug/
 target/
 Cargo.lock
 **/*.rs.bk
+cider_config
+.gradle
+.vscode
+.idea

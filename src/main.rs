@@ -1,6 +1,10 @@
 #[macro_use]
 extern crate clap;
 
+#[macro_use]
+extern crate prettytable;
+use prettytable::{Table};
+
 use clap::App;
 use serde_derive::{Deserialize, Serialize};
 use std::collections::BTreeSet;
@@ -9,6 +13,7 @@ use std::io::Read;
 use strum_macros::EnumString;
 use tokio;
 use toml;
+use openapi::api::{configuration}
 
 #[derive(Serialize, Deserialize, EnumString, Debug)]
 enum Provider {
@@ -18,7 +23,6 @@ enum Provider {
 
 #[derive(Deserialize, Debug)]
 struct ProviderConfig {
-    name: Provider,
     url: String,
 }
 
@@ -29,6 +33,14 @@ fn main() {
     match matches.subcommand() {
         ("provider", Some(sc)) => handle_provider(sc),
         ("pipeline", Some(sc)) => handle_pipeline(sc),
+        ("project", Some(sc)) => handle_project(sc),
+        _ => {}
+    }
+}
+
+fn handle_project(sc: &clap::ArgMatches<'_>) {
+    match sc.subcommand() {
+        ("list", Some(sc)) => handle_project_list(sc),
         _ => {}
     }
 }
@@ -47,7 +59,6 @@ fn handle_enable(sc: &clap::ArgMatches<'_>) {
     let file = File::open("cider.yaml").unwrap();
     let len = file.metadata().unwrap().len();
     let mut providers: BTreeSet<String> = BTreeSet::new();
-
     if len > 0 {
         providers = serde_yaml::from_reader(file).unwrap();
     }
@@ -74,6 +85,35 @@ fn handle_pipeline(sc: &clap::ArgMatches<'_>) {
 
 #[tokio::main]
 async fn handle_pipeline_list(_: &clap::ArgMatches<'_>) {
+    let file = File::open("cider.yaml").expect("failed opening file");
+    let providers: Vec<Provider> = serde_yaml::from_reader(file).unwrap();
+    let cfgs = load_provider_configs(providers);
+
+    for cfg in cfgs {
+        let mut file = File::open("provider_config.toml").expect("failed opening file");
+        let mut contents = String::new();
+        file.read_to_string(&mut contents).unwrap();
+        let _: ProviderConfig = toml::from_str(&contents).unwrap();
+        let c: Configuration = Configuration::new();
+        let j = Configuration{
+            bearer_access_token: Some(String::from("eyJ0eXAiOiAiVENWMiJ9.a21UTG9uRUE1NEZmdlJZNlFraFhMWHRvZXdV.NWViOGU2ZGUtODQ5NS00ZTc0LWJmNjktMmZhNDU3MDE1N2Iy")),
+            ..c
+    };
+    let m = build_type_api::get_all_build_types(&j, None, None)
+        .await
+        .unwrap();
+    let mut table = Table::new();
+    table.add_row(row!["name", "provider", "id", "project"]);
+
+    for bt in m.build_type.unwrap() {
+        table.add_row(row![bt.name.unwrap(), "Team City", bt.id.unwrap(), bt.project_name.unwrap()]);
+    }
+
+    table.printstd();
+}
+
+#[tokio::main]
+async fn handle_project_list(_: &clap::ArgMatches<'_>) {
     let mut file = File::open("provider_config.toml").expect("failed opening file");
     let mut contents = String::new();
     file.read_to_string(&mut contents).unwrap();
@@ -84,6 +124,20 @@ async fn handle_pipeline_list(_: &clap::ArgMatches<'_>) {
         bearer_access_token: Some(String::from("eyJ0eXAiOiAiVENWMiJ9.a21UTG9uRUE1NEZmdlJZNlFraFhMWHRvZXdV.NWViOGU2ZGUtODQ5NS00ZTc0LWJmNjktMmZhNDU3MDE1N2Iy")),
         ..c
     };
-    let m = openapi::apis::build_type_api::get_all_build_types(&j, None, None).await;
+    let m = openapi::apis::project_api::get_all_projects(&j, None, None).await;
     println!("{:?}", m);
 }
+
+fn load_provider_configs(providers : Vec<Provider>) -> Vec<ProviderConfig> {
+    let mut cfgs : Vec<ProviderConfig> = vec!();
+    for p in providers {
+        let mut filename = format!("./cider_config/{:?}.json", p);
+        filename = filename.to_lowercase();
+        let file = File::open(filename).expect("failed opening file");
+        let cfg = serde_yaml::from_reader(file).unwrap();
+        cfgs.push(cfg);
+    } 
+    cfgs
+} 
+
+

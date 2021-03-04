@@ -17,6 +17,13 @@ subcommands:
             - list:
                 about: List enabled providers
                 help: List enabled providers
+    - project:
+        about: commands to manage CI/CD projects
+        version: "0.0"
+        subcommands:
+            - list:
+                about: List the projects of enabled providers
+                help: List the projects of enabled providers
     - pipeline:
         about: commands to manage CI/CD pipelines
         version: "0.0"
