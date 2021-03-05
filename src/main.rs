@@ -9,11 +9,10 @@ use clap::App;
 use serde_derive::{Deserialize, Serialize};
 use std::collections::BTreeSet;
 use std::fs::File;
-use std::io::Read;
 use strum_macros::EnumString;
 use tokio;
-use toml;
-use openapi::api::{configuration}
+use openapi::apis::{build_type_api, configuration::{Configuration}};
+use std::env;
 
 #[derive(Serialize, Deserialize, EnumString, Debug)]
 enum Provider {
@@ -21,9 +20,10 @@ enum Provider {
     GitLab,
 }
 
-#[derive(Deserialize, Debug)]
+#[derive(Deserialize, Serialize, Debug)]
 struct ProviderConfig {
     url: String,
+    api_token: Option<String>
 }
 
 fn main() {
@@ -89,24 +89,20 @@ async fn handle_pipeline_list(_: &clap::ArgMatches<'_>) {
     let providers: Vec<Provider> = serde_yaml::from_reader(file).unwrap();
     let cfgs = load_provider_configs(providers);
 
-    for cfg in cfgs {
-        let mut file = File::open("provider_config.toml").expect("failed opening file");
-        let mut contents = String::new();
-        file.read_to_string(&mut contents).unwrap();
-        let _: ProviderConfig = toml::from_str(&contents).unwrap();
-        let c: Configuration = Configuration::new();
-        let j = Configuration{
-            bearer_access_token: Some(String::from("eyJ0eXAiOiAiVENWMiJ9.a21UTG9uRUE1NEZmdlJZNlFraFhMWHRvZXdV.NWViOGU2ZGUtODQ5NS00ZTc0LWJmNjktMmZhNDU3MDE1N2Iy")),
-            ..c
-    };
-    let m = build_type_api::get_all_build_types(&j, None, None)
-        .await
-        .unwrap();
     let mut table = Table::new();
     table.add_row(row!["name", "provider", "id", "project"]);
 
-    for bt in m.build_type.unwrap() {
-        table.add_row(row![bt.name.unwrap(), "Team City", bt.id.unwrap(), bt.project_name.unwrap()]);
+
+    for c in cfgs {
+        let mut rc = Configuration::new();
+        rc.bearer_access_token = c.api_token;
+        let m = build_type_api::get_all_build_types(&rc, None, None)
+            .await
+            .unwrap();
+
+        for bt in m.build_type.unwrap() {
+            table.add_row(row![bt.name.unwrap(), "Team City", bt.id.unwrap(), bt.project_name.unwrap()]);
+        }    
     }
 
     table.printstd();
@@ -114,30 +110,28 @@ async fn handle_pipeline_list(_: &clap::ArgMatches<'_>) {
 
 #[tokio::main]
 async fn handle_project_list(_: &clap::ArgMatches<'_>) {
-    let mut file = File::open("provider_config.toml").expect("failed opening file");
-    let mut contents = String::new();
-    file.read_to_string(&mut contents).unwrap();
-    let _: ProviderConfig = toml::from_str(&contents).unwrap();
-    let c: openapi::apis::configuration::Configuration =
-        openapi::apis::configuration::Configuration::new();
-    let j = openapi::apis::configuration::Configuration{
-        bearer_access_token: Some(String::from("eyJ0eXAiOiAiVENWMiJ9.a21UTG9uRUE1NEZmdlJZNlFraFhMWHRvZXdV.NWViOGU2ZGUtODQ5NS00ZTc0LWJmNjktMmZhNDU3MDE1N2Iy")),
-        ..c
-    };
-    let m = openapi::apis::project_api::get_all_projects(&j, None, None).await;
+    let cfg = load_provider_config(Provider::TeamCity);
+    let mut c: Configuration = Configuration::new();
+    c.bearer_access_token = cfg.api_token;
+    let m = openapi::apis::project_api::get_all_projects(&c, None, None).await;
     println!("{:?}", m);
 }
 
 fn load_provider_configs(providers : Vec<Provider>) -> Vec<ProviderConfig> {
     let mut cfgs : Vec<ProviderConfig> = vec!();
-    for p in providers {
-        let mut filename = format!("./cider_config/{:?}.json", p);
-        filename = filename.to_lowercase();
-        let file = File::open(filename).expect("failed opening file");
-        let cfg = serde_yaml::from_reader(file).unwrap();
-        cfgs.push(cfg);
-    } 
+    for p in providers {    
+        cfgs.push(load_provider_config(p));
+    };
     cfgs
-} 
+}
 
-
+fn load_provider_config(provider : Provider) -> ProviderConfig {
+    let mut filename = format!("./cider_config/{:?}.json", provider);
+    filename = filename.to_lowercase();
+    let file = File::open(filename).expect("failed opening file");
+    let mut cfg : ProviderConfig = serde_yaml::from_reader(file).unwrap();
+    let token_var = format!("{:?}_token", provider).to_uppercase();
+    let token = env::var(token_var).expect("token env var not found");
+    cfg.api_token = Some(token);
+    cfg
+}
