@@ -22,6 +22,7 @@ enum Provider {
 
 #[derive(Deserialize, Serialize, Debug)]
 struct ProviderConfig {
+    provider: Provider, 
     url: String,
     api_token: Option<String>,
 }
@@ -73,7 +74,12 @@ fn handle_enable(sc: &clap::ArgMatches<'_>) {
 fn handle_list(_: &clap::ArgMatches<'_>) {
     let file = File::open("cider.yaml").expect("failed opening file");
     let providers: Vec<Provider> = serde_yaml::from_reader(file).unwrap();
-    println!("{:?}", providers);
+    let mut table = Table::new();
+    table.add_row(row!["name"]);
+    for p in providers {
+        table.add_row(row![format!("{:?}", p)]);
+    }
+    table.printstd();
 }
 
 fn handle_pipeline(sc: &clap::ArgMatches<'_>) {
@@ -98,13 +104,15 @@ async fn handle_pipeline_list(_: &clap::ArgMatches<'_>) {
         let m = build_type_api::get_all_build_types(&rc, None, None)
             .await
             .unwrap();
+        
+        let pipelines = m.build_type.unwrap(); 
 
-        for bt in m.build_type.unwrap() {
+        for p in pipelines {
             table.add_row(row![
-                bt.name.unwrap(),
-                "Team City",
-                bt.id.unwrap(),
-                bt.project_name.unwrap()
+                p.name.unwrap(),
+                format!("{:?}", c.provider),
+                p.id.unwrap(),
+                p.project_name.unwrap()
             ]);
         }
     }
@@ -137,5 +145,6 @@ fn load_provider_config(provider: Provider) -> ProviderConfig {
     let token_var = format!("{:?}_token", provider).to_uppercase();
     let token = env::var(token_var).expect("token env var not found");
     cfg.api_token = Some(token);
+    cfg.provider = provider;
     cfg
 }
