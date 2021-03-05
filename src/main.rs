@@ -3,16 +3,16 @@ extern crate clap;
 
 #[macro_use]
 extern crate prettytable;
-use prettytable::{Table};
+use prettytable::Table;
 
 use clap::App;
+use openapi::apis::{build_type_api, configuration::Configuration};
 use serde_derive::{Deserialize, Serialize};
 use std::collections::BTreeSet;
+use std::env;
 use std::fs::File;
 use strum_macros::EnumString;
 use tokio;
-use openapi::apis::{build_type_api, configuration::{Configuration}};
-use std::env;
 
 #[derive(Serialize, Deserialize, EnumString, Debug)]
 enum Provider {
@@ -23,7 +23,7 @@ enum Provider {
 #[derive(Deserialize, Serialize, Debug)]
 struct ProviderConfig {
     url: String,
-    api_token: Option<String>
+    api_token: Option<String>,
 }
 
 fn main() {
@@ -92,7 +92,6 @@ async fn handle_pipeline_list(_: &clap::ArgMatches<'_>) {
     let mut table = Table::new();
     table.add_row(row!["name", "provider", "id", "project"]);
 
-
     for c in cfgs {
         let mut rc = Configuration::new();
         rc.bearer_access_token = c.api_token;
@@ -101,8 +100,13 @@ async fn handle_pipeline_list(_: &clap::ArgMatches<'_>) {
             .unwrap();
 
         for bt in m.build_type.unwrap() {
-            table.add_row(row![bt.name.unwrap(), "Team City", bt.id.unwrap(), bt.project_name.unwrap()]);
-        }    
+            table.add_row(row![
+                bt.name.unwrap(),
+                "Team City",
+                bt.id.unwrap(),
+                bt.project_name.unwrap()
+            ]);
+        }
     }
 
     table.printstd();
@@ -117,19 +121,19 @@ async fn handle_project_list(_: &clap::ArgMatches<'_>) {
     println!("{:?}", m);
 }
 
-fn load_provider_configs(providers : Vec<Provider>) -> Vec<ProviderConfig> {
-    let mut cfgs : Vec<ProviderConfig> = vec!();
-    for p in providers {    
+fn load_provider_configs(providers: Vec<Provider>) -> Vec<ProviderConfig> {
+    let mut cfgs: Vec<ProviderConfig> = vec![];
+    for p in providers {
         cfgs.push(load_provider_config(p));
-    };
+    }
     cfgs
 }
 
-fn load_provider_config(provider : Provider) -> ProviderConfig {
+fn load_provider_config(provider: Provider) -> ProviderConfig {
     let mut filename = format!("./cider_config/{:?}.json", provider);
     filename = filename.to_lowercase();
     let file = File::open(filename).expect("failed opening file");
-    let mut cfg : ProviderConfig = serde_yaml::from_reader(file).unwrap();
+    let mut cfg: ProviderConfig = serde_yaml::from_reader(file).unwrap();
     let token_var = format!("{:?}_token", provider).to_uppercase();
     let token = env::var(token_var).expect("token env var not found");
     cfg.api_token = Some(token);
