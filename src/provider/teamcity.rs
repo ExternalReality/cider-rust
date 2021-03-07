@@ -15,7 +15,7 @@ impl Provider for TeamCity {
     }
 
     async fn projects(&self) -> Vec<Project> {
-        let cfg = load_provider_config(ProviderType::TeamCity);
+        let cfg = load_provider_config(ProviderType::TeamCity).unwrap();
         let mut c: Configuration = Configuration::new();
         c.bearer_access_token = cfg.api_token;
         let res = project_api::get_all_projects(&c, None, None).await.unwrap();

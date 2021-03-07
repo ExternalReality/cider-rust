@@ -110,8 +110,8 @@ async fn handle_pipeline_list(_: &clap::ArgMatches<'_>) {
 
 #[tokio::main]
 async fn handle_project_list(_: &clap::ArgMatches<'_>) {
-    let cfg = provider::configuration::load_provider_config(ProviderType::TeamCity);
-    let mut c: Configuration = Configuration::new();
+    let cfg = provider::configuration::load_provider_config(ProviderType::TeamCity).unwrap();
+    let mut c : Configuration = Configuration::new();
     c.bearer_access_token = cfg.api_token;
     let provider : provider::teamcity::TeamCity = provider::Provider::new();
     let res = provider.projects().await;
