@@ -5,6 +5,8 @@ use async_trait::async_trait;
 use serde_derive::{Deserialize, Serialize};
 use strum_macros::EnumString;
 
+use crate::model::project::Project;
+
 #[derive(Serialize, Deserialize, EnumString, Debug)]
 pub enum ProviderType {
     TeamCity,
@@ -14,5 +16,5 @@ pub enum ProviderType {
 #[async_trait]
 pub trait Provider {
     fn new() -> Self;
-    async fn projects(&self) -> ();
+    async fn projects(&self) -> Vec<Project>;
 }

@@ -11,6 +11,7 @@ use std::collections::BTreeSet;
 use std::fs::File;
 use tokio;
 
+mod model;
 mod provider;
 
 pub use provider::{Provider, ProviderType};
@@ -112,16 +113,16 @@ async fn handle_project_list(_: &clap::ArgMatches<'_>) {
     let cfg = provider::configuration::load_provider_config(ProviderType::TeamCity);
     let mut c: Configuration = Configuration::new();
     c.bearer_access_token = cfg.api_token;
-    let _: provider::teamcity::TeamCity = provider::Provider::new();
+    let provider : provider::teamcity::TeamCity = provider::Provider::new();
+    let res = provider.projects().await;
 
-    // let mut table = Table::new();
-    // table.add_row(row!["name", "provider", "id"]);
-    // for p in res.project.unwrap() {
-    //     table.add_row(row![
-    //         p.name.unwrap(),
-    //         format!("{:?}", cfg.provider),
-    //         p.id.unwrap(),
-    //     ]);
-    // }
-    // table.printstd();
+    let mut table = Table::new();
+    table.add_row(row!["name", "provider"]);
+    for p in res {
+        table.add_row(row![
+            p.name,
+            format!("{:?}", cfg.provider),
+        ]);
+    }
+    table.printstd();
 }
