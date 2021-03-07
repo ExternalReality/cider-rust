@@ -3,7 +3,6 @@ extern crate clap;
 
 #[macro_use]
 extern crate prettytable;
-
 use prettytable::Table;
 
 use clap::App;
