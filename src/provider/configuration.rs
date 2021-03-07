@@ -1,7 +1,7 @@
 use serde_derive::{Deserialize, Serialize};
 use std::env;
-use std::fs::File;
 use std::error::Error;
+use std::fs::File;
 
 use crate::provider::ProviderType;
 

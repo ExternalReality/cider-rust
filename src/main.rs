@@ -8,6 +8,7 @@ use prettytable::Table;
 use clap::App;
 use openapi::apis::{build_type_api, configuration::Configuration};
 use std::collections::BTreeSet;
+use std::error::Error;
 use std::fs::File;
 use tokio;
 
@@ -45,24 +46,14 @@ fn handle_provider(sc: &clap::ArgMatches<'_>) {
 
 fn handle_enable(sc: &clap::ArgMatches<'_>) {
     let input = sc.value_of("provider").unwrap();
-    let _: ProviderType = input.parse().unwrap();
-    let file = File::open("cider.yaml").unwrap();
-    let len = file.metadata().unwrap().len();
-    let mut providers: BTreeSet<String> = BTreeSet::new();
-    if len > 0 {
-        providers = serde_yaml::from_reader(file).unwrap();
-    }
-
-    providers.insert(input.to_string());
-    let file = File::create("cider.yaml").unwrap();
-    serde_yaml::to_writer(file, &providers).unwrap();
-
-    println!("{:?}", providers)
+    let provider: ProviderType = input.parse().unwrap();
+    let mut providers = load_enabled_providers().unwrap();
+    providers.push(provider);
+    write_enabled_providers(&providers).unwrap();
 }
 
 fn handle_list(_: &clap::ArgMatches<'_>) {
-    let file = File::open("cider.yaml").expect("failed opening file");
-    let providers: Vec<ProviderType> = serde_yaml::from_reader(file).unwrap();
+    let providers = load_enabled_providers().unwrap();
     let mut table = Table::new();
     table.add_row(row!["name"]);
     for p in providers {
@@ -80,8 +71,7 @@ fn handle_pipeline(sc: &clap::ArgMatches<'_>) {
 
 #[tokio::main]
 async fn handle_pipeline_list(_: &clap::ArgMatches<'_>) {
-    let file = File::open("cider.yaml").expect("failed opening file");
-    let providers: Vec<ProviderType> = serde_yaml::from_reader(file).unwrap();
+    let providers = load_enabled_providers().unwrap();
     let cfgs = provider::configuration::load_provider_configs(providers);
 
     let mut table = Table::new();
@@ -111,18 +101,41 @@ async fn handle_pipeline_list(_: &clap::ArgMatches<'_>) {
 #[tokio::main]
 async fn handle_project_list(_: &clap::ArgMatches<'_>) {
     let cfg = provider::configuration::load_provider_config(ProviderType::TeamCity).unwrap();
-    let mut c : Configuration = Configuration::new();
+    let mut c: Configuration = Configuration::new();
     c.bearer_access_token = cfg.api_token;
-    let provider : provider::teamcity::TeamCity = provider::Provider::new();
+    let provider: provider::teamcity::TeamCity = provider::Provider::new();
     let res = provider.projects().await;
 
     let mut table = Table::new();
     table.add_row(row!["name", "provider"]);
     for p in res {
-        table.add_row(row![
-            p.name,
-            format!("{:?}", cfg.provider),
-        ]);
+        table.add_row(row![p.name, format!("{:?}", cfg.provider),]);
     }
     table.printstd();
+}
+
+fn load_enabled_providers() -> Result<Vec<ProviderType>, Box<dyn Error>> {
+    let file = File::open("cider.yaml")?;
+    let len = file.metadata().unwrap().len();
+    let input: BTreeSet<String>;
+    let mut providers: Vec<ProviderType> = Vec::new();
+    if len > 0 {
+        input = serde_yaml::from_reader(file).unwrap();
+        for i in input {
+            providers.push(i.parse()?);
+        }
+    } else {
+        providers = Vec::new();
+    }
+    Ok(providers)
+}
+
+fn write_enabled_providers(providers: &Vec<ProviderType>) -> Result<(), Box<dyn Error>> {
+    let file = File::create("cider.yaml")?;
+    let mut provider_set: BTreeSet<String> = BTreeSet::new();
+    for p in providers {
+        provider_set.insert(format!("{:?}", p));
+    }
+    serde_yaml::to_writer(file, &provider_set).unwrap();
+    Ok(())
 }

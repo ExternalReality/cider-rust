@@ -4,7 +4,7 @@ use async_trait::async_trait;
 use openapi::apis::configuration::Configuration;
 use openapi::apis::project_api;
 
-use crate::model::project::{Project};
+use crate::model::project::Project;
 
 pub struct TeamCity;
 
@@ -19,12 +19,12 @@ impl Provider for TeamCity {
         let mut c: Configuration = Configuration::new();
         c.bearer_access_token = cfg.api_token;
         let res = project_api::get_all_projects(&c, None, None).await.unwrap();
-        let mut vec = vec!();
+        let mut vec = vec![];
         let ps = res.project.unwrap();
         for p in ps {
             let name = p.name.unwrap();
-            vec.push(Project{name: name });
-        };
+            vec.push(Project { name: name });
+        }
         vec
     }
 }
