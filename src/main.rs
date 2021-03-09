@@ -46,7 +46,13 @@ fn handle_provider(sc: &clap::ArgMatches<'_>) {
 
 fn handle_enable(sc: &clap::ArgMatches<'_>) {
     let input = sc.value_of("provider").unwrap();
-    let provider: ProviderType = input.parse().unwrap();
+    let provider: ProviderType = match input.parse() {
+        Ok(provider) => provider,
+        Err(_) => {
+            println!("{} is not a supported provider", input);
+            std::process::exit(1);
+        }
+    };  
     let mut providers = load_enabled_providers().unwrap();
     providers.push(provider);
     write_enabled_providers(&providers).unwrap();
@@ -109,7 +115,7 @@ async fn handle_project_list(_: &clap::ArgMatches<'_>) {
     let mut table = Table::new();
     table.add_row(row!["name", "provider"]);
     for p in res {
-        table.add_row(row![p.name, format!("{:?}", cfg.provider),]);
+        table.add_row(row![p.name, format!("{:?}", cfg.provider)]);
     }
     table.printstd();
 }
