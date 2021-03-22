@@ -1,5 +1,6 @@
 pub mod configuration;
 pub mod teamcity;
+pub mod gitlab;
 use async_trait::async_trait;
 
 use serde_derive::{Deserialize, Serialize};
@@ -8,6 +9,7 @@ use strum_macros::EnumString;
 use crate::model::project::Project;
 
 #[derive(Serialize, Deserialize, EnumString, Debug)]
+#[non_exhaustive]
 pub enum ProviderType {
     TeamCity,
     GitLab,
@@ -15,6 +17,5 @@ pub enum ProviderType {
 
 #[async_trait]
 pub trait Provider {
-    fn new() -> Self;
     async fn projects(&self) -> Vec<Project>;
 }

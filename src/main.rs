@@ -52,7 +52,7 @@ fn handle_enable(sc: &clap::ArgMatches<'_>) {
             println!("{} is not a supported provider", input);
             std::process::exit(1);
         }
-    };  
+    };
     let mut providers = load_enabled_providers().unwrap();
     providers.push(provider);
     write_enabled_providers(&providers).unwrap();
@@ -109,8 +109,11 @@ async fn handle_project_list(_: &clap::ArgMatches<'_>) {
     let cfg = provider::configuration::load_provider_config(ProviderType::TeamCity).unwrap();
     let mut c: Configuration = Configuration::new();
     c.bearer_access_token = cfg.api_token;
-    let provider: provider::teamcity::TeamCity = provider::Provider::new();
-    let res = provider.projects().await;
+    let provider = provider::teamcity::TeamCity::new();
+    let provider2 = provider::gitlab::GitLab::new();
+    let mut res = provider.projects().await;
+    let mut res2 = provider2.projects().await;
+    res.append(&mut res2);
 
     let mut table = Table::new();
     table.add_row(row!["name", "provider"]);
@@ -136,7 +139,7 @@ fn load_enabled_providers() -> Result<Vec<ProviderType>, Box<dyn Error>> {
     Ok(providers)
 }
 
-fn write_enabled_providers(providers: &Vec<ProviderType>) -> Result<(), Box<dyn Error>> {
+fn write_enabled_providers(providers: &[ProviderType]) -> Result<(), Box<dyn Error>> {
     let file = File::create("cider.yaml")?;
     let mut provider_set: BTreeSet<String> = BTreeSet::new();
     for p in providers {
@@ -144,4 +147,11 @@ fn write_enabled_providers(providers: &Vec<ProviderType>) -> Result<(), Box<dyn 
     }
     serde_yaml::to_writer(file, &provider_set).unwrap();
     Ok(())
+}
+
+fn get_provider(p: ProviderType) -> Box<dyn Provider> {
+    match p {
+        ProviderType::TeamCity => Box::new(provider::teamcity::TeamCity::new()),
+        ProviderType::GitLab => Box::new(provider::gitlab::GitLab::new()),
+    }
 }

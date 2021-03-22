@@ -10,10 +10,6 @@ pub struct TeamCity;
 
 #[async_trait]
 impl Provider for TeamCity {
-    fn new() -> TeamCity {
-        TeamCity
-    }
-
     async fn projects(&self) -> Vec<Project> {
         let cfg = load_provider_config(ProviderType::TeamCity).unwrap();
         let mut c: Configuration = Configuration::new();
@@ -23,8 +19,14 @@ impl Provider for TeamCity {
         let ps = res.project.unwrap();
         for p in ps {
             let name = p.name.unwrap();
-            vec.push(Project { name: name });
+            vec.push(Project { name });
         }
         vec
     }
+}
+
+impl TeamCity {
+    pub fn new() -> TeamCity {
+        TeamCity
+    }     
 }
