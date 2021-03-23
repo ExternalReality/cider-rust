@@ -8,4 +8,7 @@ pub struct Project {
 #[derive(Deserialize, Serialize, Debug)]
 pub struct Pipeline {
     pub name: String,
+    pub project: String,
+    pub uuid: String,
+    pub provider: String,
 }

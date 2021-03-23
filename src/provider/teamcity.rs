@@ -35,6 +35,9 @@ impl Provider for TeamCity {
         for p in results {
             vec.push(Pipeline{
                 name: p.name.unwrap(),
+                provider: format!("{:?}", cfg.provider),
+                uuid: p.project_id.unwrap(),
+                project: p.project_name.unwrap(),
             });
         }
         vec

@@ -84,6 +84,9 @@ async fn handle_pipeline_list(_: &clap::ArgMatches<'_>) {
     for p in pipelines {
         table.add_row(row![
             p.name,
+            p.provider,
+            p.uuid,
+            p.project
         ]);
     }
     table.printstd();
