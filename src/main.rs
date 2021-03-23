@@ -149,6 +149,7 @@ fn write_enabled_providers(providers: &[ProviderType]) -> Result<(), Box<dyn Err
     Ok(())
 }
 
+#[warn(dead_code)]
 fn get_provider(p: ProviderType) -> Box<dyn Provider> {
     match p {
         ProviderType::TeamCity => Box::new(provider::teamcity::TeamCity::new()),
