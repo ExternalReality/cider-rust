@@ -6,7 +6,7 @@ extern crate prettytable;
 use prettytable::Table;
 
 use clap::App;
-use openapi::apis::{build_type_api, configuration::Configuration};
+use openapi::apis::{configuration::Configuration};
 use std::collections::BTreeSet;
 use std::error::Error;
 use std::fs::File;
@@ -77,29 +77,14 @@ fn handle_pipeline(sc: &clap::ArgMatches<'_>) {
 
 #[tokio::main]
 async fn handle_pipeline_list(_: &clap::ArgMatches<'_>) {
-    let providers = load_enabled_providers().unwrap();
-    let cfgs = provider::configuration::load_provider_configs(providers);
-
     let mut table = Table::new();
+    let provider = provider::teamcity::TeamCity::new();
     table.add_row(row!["name", "provider", "id", "project"]);
-
-    for c in cfgs {
-        let mut rc = Configuration::new();
-        rc.bearer_access_token = c.api_token;
-        let m = build_type_api::get_all_build_types(&rc, None, None)
-            .await
-            .unwrap();
-
-        let pipelines = m.build_type.unwrap();
-
-        for p in pipelines {
-            table.add_row(row![
-                p.name.unwrap(),
-                format!("{:?}", c.provider),
-                p.id.unwrap(),
-                p.project_name.unwrap()
-            ]);
-        }
+    let pipelines = provider.pipelines().await;
+    for p in pipelines {
+        table.add_row(row![
+            p.name,
+        ]);
     }
     table.printstd();
 }
@@ -149,7 +134,7 @@ fn write_enabled_providers(providers: &[ProviderType]) -> Result<(), Box<dyn Err
     Ok(())
 }
 
-#[warn(dead_code)]
+#[allow(dead_code)]
 fn get_provider(p: ProviderType) -> Box<dyn Provider> {
     match p {
         ProviderType::TeamCity => Box::new(provider::teamcity::TeamCity::new()),

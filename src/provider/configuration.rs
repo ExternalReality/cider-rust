@@ -12,14 +12,6 @@ pub struct ProviderConfig {
     pub api_token: Option<String>,
 }
 
-pub fn load_provider_configs(providers: Vec<ProviderType>) -> Vec<ProviderConfig> {
-    let mut cfgs: Vec<ProviderConfig> = vec![];
-    for p in providers {
-        cfgs.push(load_provider_config(p).unwrap());
-    }
-    cfgs
-}
-
 pub fn load_provider_config(provider: ProviderType) -> Result<ProviderConfig, Box<dyn Error>> {
     let mut filename = format!("./cider_config/{:?}.json", provider);
     filename = filename.to_lowercase();
