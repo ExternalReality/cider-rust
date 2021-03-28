@@ -1,12 +1,12 @@
 pub mod configuration;
-pub mod teamcity;
 pub mod gitlab;
+pub mod teamcity;
 use async_trait::async_trait;
 
 use serde_derive::{Deserialize, Serialize};
 use strum_macros::EnumString;
 
-use crate::model::project::{Project, Pipeline};
+use crate::model::project::{Pipeline, Project};
 
 #[derive(Serialize, Deserialize, EnumString, Debug)]
 #[non_exhaustive]

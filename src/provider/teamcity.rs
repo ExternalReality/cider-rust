@@ -2,9 +2,9 @@ use crate::provider::configuration::load_provider_config;
 use crate::provider::{Provider, ProviderType};
 use async_trait::async_trait;
 use openapi::apis::configuration::Configuration;
-use openapi::apis::{project_api, build_type_api};
+use openapi::apis::{build_type_api, project_api};
 
-use crate::model::project::{Project, Pipeline};
+use crate::model::project::{Pipeline, Project};
 
 pub struct TeamCity;
 
@@ -26,14 +26,14 @@ impl Provider for TeamCity {
     async fn pipelines(&self) -> Vec<Pipeline> {
         let cfg = load_provider_config(ProviderType::TeamCity).unwrap();
         let mut rc = Configuration::new();
-        let mut vec : Vec<Pipeline> = vec!();
+        let mut vec: Vec<Pipeline> = vec![];
         rc.bearer_access_token = cfg.api_token;
         let m = build_type_api::get_all_build_types(&rc, None, None)
             .await
             .unwrap();
         let results = m.build_type.unwrap();
         for p in results {
-            vec.push(Pipeline{
+            vec.push(Pipeline {
                 name: p.name.unwrap(),
                 provider: format!("{:?}", cfg.provider),
                 uuid: p.project_id.unwrap(),
@@ -47,5 +47,5 @@ impl Provider for TeamCity {
 impl TeamCity {
     pub fn new() -> TeamCity {
         TeamCity
-    }     
+    }
 }

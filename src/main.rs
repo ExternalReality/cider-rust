@@ -6,7 +6,7 @@ extern crate prettytable;
 use prettytable::Table;
 
 use clap::App;
-use openapi::apis::{configuration::Configuration};
+use openapi::apis::configuration::Configuration;
 use std::collections::BTreeSet;
 use std::error::Error;
 use std::fs::File;
@@ -82,31 +82,25 @@ async fn handle_pipeline_list(_: &clap::ArgMatches<'_>) {
     table.add_row(row!["name", "provider", "id", "project"]);
     let pipelines = provider.pipelines().await;
     for p in pipelines {
-        table.add_row(row![
-            p.name,
-            p.provider,
-            p.uuid,
-            p.project
-        ]);
+        table.add_row(row![p.name, p.provider, p.uuid, p.project]);
     }
     table.printstd();
 }
 
 #[tokio::main]
 async fn handle_project_list(_: &clap::ArgMatches<'_>) {
-    let cfg = provider::configuration::load_provider_config(ProviderType::TeamCity).unwrap();
-    let mut c: Configuration = Configuration::new();
-    c.bearer_access_token = cfg.api_token;
-    let provider = provider::teamcity::TeamCity::new();
-    let provider2 = provider::gitlab::GitLab::new();
-    let mut res = provider.projects().await;
-    let mut res2 = provider2.projects().await;
-    res.append(&mut res2);
-
     let mut table = Table::new();
     table.add_row(row!["name", "provider"]);
-    for p in res {
-        table.add_row(row![p.name, format!("{:?}", cfg.provider)]);
+    let provider_types = load_enabled_providers().unwrap();
+    for pt in provider_types {
+        let provider = get_provider(&pt);
+        let cfg = provider::configuration::load_provider_config(pt).unwrap();
+        let mut c: Configuration = Configuration::new();
+        c.bearer_access_token = cfg.api_token;
+        let res = provider.projects().await;
+        for p in res {
+            table.add_row(row![p.name, format!("{:?}", cfg.provider)]);
+        }
     }
     table.printstd();
 }
@@ -138,7 +132,7 @@ fn write_enabled_providers(providers: &[ProviderType]) -> Result<(), Box<dyn Err
 }
 
 #[allow(dead_code)]
-fn get_provider(p: ProviderType) -> Box<dyn Provider> {
+fn get_provider(p: &ProviderType) -> Box<dyn Provider> {
     match p {
         ProviderType::TeamCity => Box::new(provider::teamcity::TeamCity::new()),
         ProviderType::GitLab => Box::new(provider::gitlab::GitLab::new()),
